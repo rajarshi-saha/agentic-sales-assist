@@ -13,6 +13,9 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['Segoe UI', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'Helvetica Neue', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -57,6 +60,32 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        outlook: {
+          nav: {
+            bg: "hsl(var(--outlook-nav-bg))",
+            hover: "hsl(var(--outlook-nav-hover))",
+            active: "hsl(var(--outlook-nav-active))",
+          },
+          list: {
+            hover: "hsl(var(--outlook-list-hover))",
+            selected: "hsl(var(--outlook-list-selected))",
+          },
+          border: "hsl(var(--outlook-border))",
+          unread: "hsl(var(--outlook-unread))",
+          read: "hsl(var(--outlook-read))",
+        },
+        intent: {
+          product: "hsl(var(--intent-product))",
+          pricing: "hsl(var(--intent-pricing))",
+          access: "hsl(var(--intent-access))",
+          admin: "hsl(var(--intent-admin))",
+          salesops: "hsl(var(--intent-salesops))",
+          highvalue: "hsl(var(--intent-highvalue))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -65,25 +94,37 @@ export default {
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        "fade-in-up": {
+          from: { opacity: "0", transform: "translateY(8px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "fade-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
+        "slide-in-right": {
+          from: { opacity: "0", transform: "translateX(16px)" },
+          to: { opacity: "1", transform: "translateX(0)" },
+        },
+        "slide-up": {
+          from: { opacity: "0", transform: "translateY(100%)" },
+          to: { opacity: "1", transform: "translateY(0)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "fade-in-up": "fade-in-up 0.3s ease-out forwards",
+        "fade-in": "fade-in 0.2s ease-out forwards",
+        "slide-in-right": "slide-in-right 0.25s ease-out forwards",
+        "slide-up": "slide-up 0.3s ease-out forwards",
       },
     },
   },
