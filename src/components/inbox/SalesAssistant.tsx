@@ -1,31 +1,30 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Email, AssistantMessage } from '@/types/email';
-import { assistantPrompts } from '@/data/intentActions';
 import { cn } from '@/lib/utils';
-import { Bot, Send, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { Bot, Send, ChevronDown, ChevronUp, Sparkles, Brain, Lightbulb, AlertCircle, TrendingUp } from 'lucide-react';
+import { analyzeEmail, generateRecommendation, generateContextualResponse, EmailAnalysis, AgentRecommendation } from '@/lib/emailAnalyzer';
 
 interface SalesAssistantProps {
   email: Email;
 }
 
-const scriptedResponses: Record<string, string> = {
-  'yes': "Great! I'm preparing that for you now. The action will be completed momentarily.",
-  'no': "No problem. Let me know if you need any other assistance with this email.",
-  'help': "I can help you with:\n• Sending standard responses\n• Delegating to internal teams\n• Creating support tickets\n• Generating quote drafts\n\nJust tell me what you need!",
-  'delegate': "I'll route this to the appropriate team right away. They'll receive all the context from this email.",
-  'draft': "I'm drafting a response based on the email context. You can review and edit before sending.",
-  'schedule': "Would you like me to suggest some available time slots for a follow-up call?",
-  'account': "I can pull up the account history for this customer. This includes past purchases, support tickets, and renewal dates.",
-  'default': "I understand. I'm here to help with any routine tasks so you can focus on what matters most. Just let me know what you need.",
-};
-
 export function SalesAssistant({ email }: SalesAssistantProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
-  
-  const prompts = assistantPrompts[email.detectedIntent];
-  const initialPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+  const [isAnalyzing, setIsAnalyzing] = useState(true);
+
+  // Analyze email on mount/change
+  const analysis = useMemo(() => analyzeEmail(email), [email]);
+  const recommendation = useMemo(() => generateRecommendation(email, analysis), [email, analysis]);
+
+  // Simulate analysis delay
+  useEffect(() => {
+    setIsAnalyzing(true);
+    setMessages([]);
+    const timer = setTimeout(() => setIsAnalyzing(false), 800);
+    return () => clearTimeout(timer);
+  }, [email.id]);
 
   const handleSend = () => {
     if (!inputValue.trim()) return;
@@ -36,16 +35,8 @@ export function SalesAssistant({ email }: SalesAssistantProps) {
       content: inputValue,
     };
 
-    // Find matching scripted response
-    const lowerInput = inputValue.toLowerCase();
-    let responseContent = scriptedResponses.default;
-    
-    for (const [key, response] of Object.entries(scriptedResponses)) {
-      if (lowerInput.includes(key)) {
-        responseContent = response;
-        break;
-      }
-    }
+    // Generate contextual response based on email analysis
+    const responseContent = generateContextualResponse(inputValue, email, analysis, recommendation);
 
     const assistantMessage: AssistantMessage = {
       id: (Date.now() + 1).toString(),
@@ -57,18 +48,39 @@ export function SalesAssistant({ email }: SalesAssistantProps) {
     setInputValue('');
   };
 
+  const getUrgencyColor = (urgency: EmailAnalysis['urgency']) => {
+    switch (urgency) {
+      case 'critical': return 'text-destructive';
+      case 'high': return 'text-orange-500';
+      case 'medium': return 'text-primary';
+      case 'low': return 'text-muted-foreground';
+    }
+  };
+
+  const getSentimentIcon = (sentiment: EmailAnalysis['sentiment']) => {
+    switch (sentiment) {
+      case 'positive': return '😊';
+      case 'frustrated': return '😤';
+      case 'urgent': return '⏰';
+      default: return '📧';
+    }
+  };
+
   return (
     <div className="border border-border rounded-lg bg-card overflow-hidden animate-fade-in-up">
       {/* Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted/70 transition-smooth"
+        className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary/5 to-primary/10 hover:from-primary/10 hover:to-primary/15 transition-smooth"
       >
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-            <Bot className="w-4 h-4 text-primary" />
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-sm">
+            <Brain className="w-4 h-4 text-primary-foreground" />
           </div>
-          <span className="font-medium text-sm text-foreground">Sales Assistant</span>
+          <div className="text-left">
+            <span className="font-semibold text-sm text-foreground block">Sales Agent</span>
+            <span className="text-xs text-muted-foreground">Context-aware assistance</span>
+          </div>
           <Sparkles className="w-3 h-3 text-primary animate-pulse-subtle" />
         </div>
         {isExpanded ? (
@@ -81,17 +93,101 @@ export function SalesAssistant({ email }: SalesAssistantProps) {
       {/* Content */}
       {isExpanded && (
         <div className="animate-fade-in">
+          {/* Analysis Panel */}
+          <div className="p-4 border-b border-border bg-muted/30">
+            {isAnalyzing ? (
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <span>Analyzing email context...</span>
+              </div>
+            ) : (
+              <div className="space-y-3 animate-fade-in">
+                {/* Context Summary */}
+                <div className="flex items-start gap-2">
+                  <Lightbulb className="w-4 h-4 text-yellow-500 mt-0.5 shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground">{recommendation.summary}</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <span className={cn("text-xs px-2 py-0.5 rounded-full bg-muted", getUrgencyColor(analysis.urgency))}>
+                        {analysis.urgency.charAt(0).toUpperCase() + analysis.urgency.slice(1)} priority
+                      </span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-foreground">
+                        {getSentimentIcon(analysis.sentiment)} {analysis.sentiment.charAt(0).toUpperCase() + analysis.sentiment.slice(1)}
+                      </span>
+                      {analysis.decisionMaker && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-600">
+                          Decision-maker
+                        </span>
+                      )}
+                      {analysis.estimatedDealValue !== 'unknown' && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary flex items-center gap-1">
+                          <TrendingUp className="w-3 h-3" />
+                          {analysis.estimatedDealValue.charAt(0).toUpperCase() + analysis.estimatedDealValue.slice(1)} value
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Products Detected */}
+                {analysis.products.length > 0 && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-muted-foreground">Products:</span>
+                    <div className="flex flex-wrap gap-1">
+                      {analysis.products.map((product) => (
+                        <span key={product} className="px-2 py-0.5 bg-primary/10 text-primary rounded">
+                          {product}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recommendation */}
+                <div className="bg-primary/5 rounded-lg p-3 border border-primary/10">
+                  <div className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                      <Bot className="w-3 h-3 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Recommended action</p>
+                      <p className="text-sm text-primary mt-1">{recommendation.primaryAction}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{recommendation.reasoning}</p>
+                      {recommendation.timeSensitivity && (
+                        <p className="text-xs text-orange-500 mt-1 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {recommendation.timeSensitivity}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Key Insights */}
+                {analysis.actionableInsights.length > 0 && (
+                  <div className="text-xs space-y-1">
+                    <span className="text-muted-foreground font-medium">Insights:</span>
+                    <ul className="space-y-0.5">
+                      {analysis.actionableInsights.slice(0, 3).map((insight, i) => (
+                        <li key={i} className="text-foreground flex items-center gap-1.5">
+                          <span className="w-1 h-1 rounded-full bg-primary" />
+                          {insight}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Messages */}
-          <div className="p-4 space-y-3 max-h-64 overflow-y-auto custom-scrollbar">
-            {/* Initial prompt */}
-            <div className="flex gap-3">
-              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Bot className="w-4 h-4 text-primary" />
-              </div>
-              <div className="bg-muted rounded-lg px-3 py-2 max-w-[85%]">
-                <p className="text-sm text-foreground">{initialPrompt}</p>
-              </div>
-            </div>
+          <div className="p-4 space-y-3 max-h-48 overflow-y-auto custom-scrollbar">
+            {messages.length === 0 && !isAnalyzing && (
+              <p className="text-xs text-muted-foreground text-center py-2">
+                Ask me about this email, request alternatives, or get talking points
+              </p>
+            )}
 
             {/* Conversation history */}
             {messages.map((message) => (
@@ -103,8 +199,8 @@ export function SalesAssistant({ email }: SalesAssistantProps) {
                 )}
               >
                 {message.type === 'assistant' && (
-                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <Bot className="w-4 h-4 text-primary" />
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shrink-0">
+                    <Bot className="w-4 h-4 text-primary-foreground" />
                   </div>
                 )}
                 <div className={cn(
@@ -127,7 +223,7 @@ export function SalesAssistant({ email }: SalesAssistantProps) {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Type a message..."
+                placeholder="Ask about this email... (e.g., 'Why?' 'Talking points?' 'Draft response')"
                 className="flex-1 px-3 py-2 text-sm bg-muted rounded border-0 focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground"
               />
               <button
