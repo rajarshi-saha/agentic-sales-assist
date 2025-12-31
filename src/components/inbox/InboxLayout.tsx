@@ -17,6 +17,7 @@ export function InboxLayout() {
   const [activeFolder, setActiveFolder] = useState('inbox');
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
+  const [showCopilot, setShowCopilot] = useState(false);
 
   const filteredEmails = emails.filter(e => e.folder === activeFolder);
   const selectedEmail = emails.find(e => e.id === selectedEmailId) || null;
@@ -57,6 +58,14 @@ export function InboxLayout() {
     setFeedback(null);
   }, []);
 
+  const handleAnalyze = useCallback(() => {
+    setShowCopilot(true);
+  }, []);
+
+  const handleCloseCopilot = useCallback(() => {
+    setShowCopilot(false);
+  }, []);
+
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       {/* Navigation Pane */}
@@ -77,6 +86,9 @@ export function InboxLayout() {
       <ReadingPane
         email={selectedEmail}
         onAction={handleAction}
+        onAnalyze={handleAnalyze}
+        showCopilot={showCopilot}
+        onCloseCopilot={handleCloseCopilot}
       />
 
       {/* Action Feedback Toast */}

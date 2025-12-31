@@ -13,12 +13,14 @@ import {
   MessageSquare, 
   Users, 
   ArrowRightCircle,
-  Zap
+  Zap,
+  Sparkles
 } from 'lucide-react';
 
 interface ActionSurfaceProps {
   email: Email;
   onAction: (actionId: string, feedbackMessage: string, timeSaved?: string) => void;
+  onAnalyze?: () => void;
 }
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -35,7 +37,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   ArrowRightCircle,
 };
 
-export function ActionSurface({ email, onAction }: ActionSurfaceProps) {
+export function ActionSurface({ email, onAction, onAnalyze }: ActionSurfaceProps) {
   const actions = intentActions[email.detectedIntent];
   const isHighValue = email.detectedIntent === 'HighValueSalesConversation';
 
@@ -58,10 +60,21 @@ export function ActionSurface({ email, onAction }: ActionSurfaceProps) {
     <div className="px-6 py-3 bg-muted/50 border-b border-border animate-fade-in">
       <div className="flex items-center gap-3 flex-wrap">
         {isHighValue ? (
-          <div className="focus-required">
-            <Zap className="w-4 h-4" />
-            <span>Focus Required — Strategic Conversation</span>
-          </div>
+          <>
+            <div className="focus-required">
+              <Zap className="w-4 h-4" />
+              <span>Focus Required — Strategic Conversation</span>
+            </div>
+            {onAnalyze && (
+              <button
+                onClick={onAnalyze}
+                className="action-btn bg-gradient-to-r from-primary to-primary/80 animate-fade-in"
+              >
+                <Sparkles className="w-4 h-4" />
+                Analyze
+              </button>
+            )}
+          </>
         ) : (
           <>
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide mr-1">
@@ -84,6 +97,16 @@ export function ActionSurface({ email, onAction }: ActionSurfaceProps) {
                 </button>
               );
             })}
+            {onAnalyze && (
+              <button
+                onClick={onAnalyze}
+                className="action-btn bg-gradient-to-r from-primary to-primary/80 animate-fade-in"
+                style={{ animationDelay: `${actions.length * 50}ms` }}
+              >
+                <Sparkles className="w-4 h-4" />
+                Analyze
+              </button>
+            )}
           </>
         )}
       </div>
