@@ -1,10 +1,19 @@
-export type EmailIntent =
+export type EmailCategory = 'sales' | 'support';
+
+export type SalesIntent =
   | 'ProductEnquiry'
-  | 'PricingOrRenewalRequest'
-  | 'AccessOrEntitlementIssue'
-  | 'AdminOrMaintenanceRequest'
-  | 'DelegateToSalesOps'
-  | 'HighValueSalesConversation';
+  | 'PricingRequest'
+  | 'RenewalRequest'
+  | 'HighValueOpportunity';
+
+export type SupportIntent =
+  | 'ProductRefund'
+  | 'AccountReset'
+  | 'PasswordChange'
+  | 'AccessIssue'
+  | 'TechnicalSupport';
+
+export type EmailIntent = SalesIntent | SupportIntent;
 
 export interface Email {
   id: string;
@@ -20,7 +29,6 @@ export interface Email {
   receivedTime: Date;
   isRead: boolean;
   isHandled: boolean;
-  detectedIntent: EmailIntent;
   folder: 'inbox' | 'sent' | 'drafts' | 'archive';
 }
 
@@ -44,4 +52,23 @@ export interface AssistantMessage {
   id: string;
   type: 'assistant' | 'user';
   content: string;
+}
+
+export interface AgentStep {
+  id: string;
+  agentName: string;
+  agentType: 'classifier' | 'analyzer' | 'sales' | 'support' | 'router';
+  status: 'pending' | 'running' | 'completed' | 'error';
+  input?: string;
+  output?: string;
+  duration?: number;
+}
+
+export interface AgenticWorkflow {
+  emailId: string;
+  category: EmailCategory;
+  intent: EmailIntent;
+  steps: AgentStep[];
+  startTime: Date;
+  endTime?: Date;
 }

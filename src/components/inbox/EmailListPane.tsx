@@ -2,7 +2,6 @@ import { cn } from '@/lib/utils';
 import { Email } from '@/types/email';
 import { formatDistanceToNow } from 'date-fns';
 import { Check } from 'lucide-react';
-import { IntentBadge } from './IntentBadge';
 
 interface EmailListPaneProps {
   emails: Email[];
@@ -82,10 +81,6 @@ export function EmailListPane({ emails, selectedEmailId, onSelectEmail }: EmailL
                 <p className="text-xs text-muted-foreground truncate mt-1">
                   {email.preview}
                 </p>
-
-                <div className="mt-2">
-                  <IntentBadge intent={email.detectedIntent} size="sm" />
-                </div>
               </div>
 
               {/* Unread indicator */}

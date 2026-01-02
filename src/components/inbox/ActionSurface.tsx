@@ -1,5 +1,6 @@
 import { Email } from '@/types/email';
-import { intentActions } from '@/data/intentActions';
+import { getActionsForIntent } from '@/data/intentActions';
+import { analyzeEmail } from '@/lib/emailAnalyzer';
 import { cn } from '@/lib/utils';
 import { 
   Send, 
@@ -13,8 +14,17 @@ import {
   MessageSquare, 
   Users, 
   ArrowRightCircle,
-  Zap,
-  Sparkles
+  Sparkles,
+  CreditCard,
+  Search,
+  RefreshCw,
+  Mail,
+  Key,
+  AlertCircle,
+  Unlock,
+  DollarSign,
+  Calendar,
+  Zap
 } from 'lucide-react';
 
 interface ActionSurfaceProps {
@@ -35,12 +45,19 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   MessageSquare,
   Users,
   ArrowRightCircle,
+  CreditCard,
+  Search,
+  RefreshCw,
+  Mail,
+  Key,
+  AlertCircle,
+  Unlock,
+  DollarSign,
+  Calendar,
+  Zap,
 };
 
 export function ActionSurface({ email, onAction, onAnalyze }: ActionSurfaceProps) {
-  const actions = intentActions[email.detectedIntent];
-  const isHighValue = email.detectedIntent === 'HighValueSalesConversation';
-
   if (email.isHandled) {
     return (
       <div className="px-6 py-3 bg-success/10 border-b border-success/20 animate-fade-in">
@@ -59,55 +76,17 @@ export function ActionSurface({ email, onAction, onAnalyze }: ActionSurfaceProps
   return (
     <div className="px-6 py-3 bg-muted/50 border-b border-border animate-fade-in">
       <div className="flex items-center gap-3 flex-wrap">
-        {isHighValue ? (
-          <>
-            <div className="focus-required">
-              <Zap className="w-4 h-4" />
-              <span>Focus Required — Strategic Conversation</span>
-            </div>
-            {onAnalyze && (
-              <button
-                onClick={onAnalyze}
-                className="action-btn bg-gradient-to-r from-primary to-primary/80 animate-fade-in"
-              >
-                <Sparkles className="w-4 h-4" />
-                Analyze
-              </button>
-            )}
-          </>
-        ) : (
-          <>
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide mr-1">
-              Quick Actions:
-            </span>
-            {actions.map((action, index) => {
-              const Icon = iconMap[action.icon] || Send;
-              return (
-                <button
-                  key={action.id}
-                  onClick={() => onAction(action.id, action.feedbackMessage, action.timeSaved)}
-                  className={cn(
-                    action.variant === 'primary' ? 'action-btn' : 'action-btn-secondary',
-                    'animate-fade-in'
-                  )}
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <Icon className="w-4 h-4" />
-                  {action.label}
-                </button>
-              );
-            })}
-            {onAnalyze && (
-              <button
-                onClick={onAnalyze}
-                className="action-btn bg-gradient-to-r from-primary to-primary/80 animate-fade-in"
-                style={{ animationDelay: `${actions.length * 50}ms` }}
-              >
-                <Sparkles className="w-4 h-4" />
-                Analyze
-              </button>
-            )}
-          </>
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide mr-1">
+          Quick Actions:
+        </span>
+        {onAnalyze && (
+          <button
+            onClick={onAnalyze}
+            className="action-btn bg-gradient-to-r from-primary to-primary/80 animate-fade-in"
+          >
+            <Sparkles className="w-4 h-4" />
+            Analyze
+          </button>
         )}
       </div>
     </div>
