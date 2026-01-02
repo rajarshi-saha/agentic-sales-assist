@@ -1,6 +1,7 @@
-import { EmailIntent, ActionButton } from '@/types/email';
+import { EmailCategory, EmailIntent, ActionButton } from '@/types/email';
 
-export const intentActions: Record<EmailIntent, ActionButton[]> = {
+// Sales intent actions
+export const salesIntentActions: Record<string, ActionButton[]> = {
   ProductEnquiry: [
     {
       id: 'send-standard',
@@ -19,15 +20,15 @@ export const intentActions: Record<EmailIntent, ActionButton[]> = {
       timeSaved: '15 min',
     },
     {
-      id: 'delegate-inside-sales',
-      label: 'Delegate to Inside Sales',
-      icon: 'UserPlus',
+      id: 'schedule-demo',
+      label: 'Schedule Demo',
+      icon: 'Calendar',
       variant: 'secondary',
-      feedbackMessage: 'Request delegated to Inside Sales team',
+      feedbackMessage: 'Demo scheduled with customer',
       timeSaved: '20 min',
     },
   ],
-  PricingOrRenewalRequest: [
+  PricingRequest: [
     {
       id: 'generate-quote',
       label: 'Generate Quote Draft',
@@ -37,23 +38,101 @@ export const intentActions: Record<EmailIntent, ActionButton[]> = {
       timeSaved: '25 min',
     },
     {
+      id: 'send-pricing',
+      label: 'Send Pricing Sheet',
+      icon: 'DollarSign',
+      variant: 'secondary',
+      feedbackMessage: 'Pricing sheet sent to customer',
+      timeSaved: '15 min',
+    },
+  ],
+  RenewalRequest: [
+    {
       id: 'forward-renewals',
       label: 'Forward to Renewals',
       icon: 'Forward',
-      variant: 'secondary',
+      variant: 'primary',
       feedbackMessage: 'Request forwarded to Renewals team',
       timeSaved: '15 min',
     },
     {
-      id: 'request-missing-info',
-      label: 'Request Missing Info',
-      icon: 'HelpCircle',
+      id: 'generate-renewal-quote',
+      label: 'Generate Renewal Quote',
+      icon: 'FileSpreadsheet',
       variant: 'secondary',
-      feedbackMessage: 'Information request sent to customer',
+      feedbackMessage: 'Renewal quote generated',
+      timeSaved: '20 min',
+    },
+  ],
+  HighValueOpportunity: [
+    {
+      id: 'priority-response',
+      label: 'Priority Response',
+      icon: 'Zap',
+      variant: 'primary',
+      feedbackMessage: 'Priority response drafted',
+      timeSaved: '30 min',
+    },
+  ],
+};
+
+// Support intent actions
+export const supportIntentActions: Record<string, ActionButton[]> = {
+  ProductRefund: [
+    {
+      id: 'process-refund',
+      label: 'Process Refund',
+      icon: 'CreditCard',
+      variant: 'primary',
+      feedbackMessage: 'Refund processed successfully',
+      timeSaved: '15 min',
+    },
+    {
+      id: 'verify-transaction',
+      label: 'Verify Transaction',
+      icon: 'Search',
+      variant: 'secondary',
+      feedbackMessage: 'Transaction verification initiated',
       timeSaved: '10 min',
     },
   ],
-  AccessOrEntitlementIssue: [
+  AccountReset: [
+    {
+      id: 'reset-account',
+      label: 'Reset Account',
+      icon: 'RefreshCw',
+      variant: 'primary',
+      feedbackMessage: 'Account reset initiated',
+      timeSaved: '10 min',
+    },
+    {
+      id: 'send-verification',
+      label: 'Send Verification',
+      icon: 'Mail',
+      variant: 'secondary',
+      feedbackMessage: 'Verification email sent',
+      timeSaved: '5 min',
+    },
+  ],
+  PasswordChange: [
+    {
+      id: 'send-reset-link',
+      label: 'Send Reset Link',
+      icon: 'Key',
+      variant: 'primary',
+      feedbackMessage: 'Password reset link sent',
+      timeSaved: '5 min',
+    },
+    {
+      id: 'escalate-it',
+      label: 'Escalate to IT',
+      icon: 'AlertCircle',
+      variant: 'secondary',
+      feedbackMessage: 'Issue escalated to IT team',
+      timeSaved: '10 min',
+    },
+  ],
+  AccessIssue: [
     {
       id: 'create-ticket',
       label: 'Create Support Ticket',
@@ -63,68 +142,37 @@ export const intentActions: Record<EmailIntent, ActionButton[]> = {
       timeSaved: '15 min',
     },
     {
-      id: 'delegate-support',
-      label: 'Delegate to Customer Support',
-      icon: 'Headphones',
+      id: 'grant-temp-access',
+      label: 'Grant Temporary Access',
+      icon: 'Unlock',
       variant: 'secondary',
-      feedbackMessage: 'Request delegated to Customer Support',
-      timeSaved: '20 min',
-    },
-  ],
-  AdminOrMaintenanceRequest: [
-    {
-      id: 'auto-reply-faq',
-      label: 'Auto-Reply with FAQ',
-      icon: 'MessageSquare',
-      variant: 'primary',
-      feedbackMessage: 'FAQ response sent automatically',
+      feedbackMessage: 'Temporary access granted',
       timeSaved: '10 min',
     },
-    {
-      id: 'delegate-salesops',
-      label: 'Delegate to Sales Ops',
-      icon: 'Users',
-      variant: 'secondary',
-      feedbackMessage: 'Request delegated to Sales Ops',
-      timeSaved: '15 min',
-    },
   ],
-  DelegateToSalesOps: [
+  TechnicalSupport: [
     {
-      id: 'handoff-salesops',
-      label: 'Hand Off to Sales Ops',
-      icon: 'ArrowRightCircle',
+      id: 'escalate-technical',
+      label: 'Escalate to Technical',
+      icon: 'Headphones',
       variant: 'primary',
-      feedbackMessage: 'Request handed off to Sales Ops',
+      feedbackMessage: 'Issue escalated to technical team',
       timeSaved: '20 min',
     },
+    {
+      id: 'send-troubleshooting',
+      label: 'Send Troubleshooting Guide',
+      icon: 'FileText',
+      variant: 'secondary',
+      feedbackMessage: 'Troubleshooting guide sent',
+      timeSaved: '10 min',
+    },
   ],
-  HighValueSalesConversation: [],
 };
 
-export const assistantPrompts: Record<EmailIntent, string[]> = {
-  ProductEnquiry: [
-    "I've detected a product enquiry. Would you like me to send a standard response with product information?",
-    "This looks like a request for product details. Should I share our product brochure and schedule a demo?",
-  ],
-  PricingOrRenewalRequest: [
-    "This appears to be a renewal enquiry. Should I forward it to the renewals team or generate a quote draft?",
-    "I've identified a pricing request. Would you like me to pull up the customer's account history to help with the quote?",
-  ],
-  AccessOrEntitlementIssue: [
-    "This seems like an access issue. Should I create a support ticket or escalate to the technical team?",
-    "I've detected an entitlement problem. Would you like me to delegate this to Customer Support for faster resolution?",
-  ],
-  AdminOrMaintenanceRequest: [
-    "This is an administrative request. I can auto-reply with our FAQ or delegate to Sales Ops. Which would you prefer?",
-    "I've identified a maintenance request. Should I handle this automatically or would you like to review first?",
-  ],
-  DelegateToSalesOps: [
-    "This appears to be an internal request. Should I hand this off to Sales Ops?",
-    "I've detected an internal operations matter. Would you like me to route this to the appropriate team?",
-  ],
-  HighValueSalesConversation: [
-    "This is a high-value conversation that requires your personal attention. I'm here to help with research or drafting if needed.",
-    "I've flagged this as a strategic opportunity. Would you like me to pull up account history or prepare talking points?",
-  ],
-};
+export function getActionsForIntent(category: EmailCategory, intent: EmailIntent): ActionButton[] {
+  if (category === 'sales') {
+    return salesIntentActions[intent] || [];
+  }
+  return supportIntentActions[intent] || [];
+}

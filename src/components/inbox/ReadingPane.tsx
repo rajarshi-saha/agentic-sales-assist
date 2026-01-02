@@ -1,6 +1,5 @@
 import { Email } from '@/types/email';
 import { format } from 'date-fns';
-import { IntentBadge } from './IntentBadge';
 import { ActionSurface } from './ActionSurface';
 import { CopilotPanel } from './CopilotPanel';
 import { Mail, Reply, ReplyAll, Forward } from 'lucide-react';
@@ -48,7 +47,6 @@ export function ReadingPane({ email, onAction, onAnalyze, showCopilot, onCloseCo
                     <h2 className="text-lg font-semibold text-foreground">
                       {email.sender.name}
                     </h2>
-                    <IntentBadge intent={email.detectedIntent} />
                   </div>
                   <p className="text-sm text-muted-foreground mt-0.5">
                     {email.sender.email}

@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Email, AssistantMessage } from '@/types/email';
+import { useNavigate } from 'react-router-dom';
+import { Email, AssistantMessage, EmailCategory, EmailIntent } from '@/types/email';
 import { cn } from '@/lib/utils';
-import { Bot, Send, Sparkles, Brain, Lightbulb, AlertCircle, TrendingUp, Headphones, ShoppingCart, X } from 'lucide-react';
+import { Bot, Send, Sparkles, Brain, Lightbulb, AlertCircle, TrendingUp, Headphones, ShoppingCart, X, Workflow } from 'lucide-react';
 import { analyzeEmail, generateRecommendation, generateContextualResponse, EmailAnalysis, AgentRecommendation } from '@/lib/emailAnalyzer';
 
 type AgentType = 'sales' | 'support' | null;
@@ -12,63 +13,30 @@ interface CopilotPanelProps {
   onClose: () => void;
 }
 
-function categorizeQuery(email: Email): { category: 'sales' | 'support'; confidence: number } {
-  const salesIntents = ['ProductEnquiry', 'PricingOrRenewalRequest', 'HighValueSalesConversation'];
-  const supportIntents = ['AccessOrEntitlementIssue', 'AdminOrMaintenanceRequest'];
-  
-  const bodyLower = email.body.toLowerCase();
-  const subjectLower = email.subject.toLowerCase();
-  
-  // Sales keywords
-  const salesKeywords = ['pricing', 'quote', 'purchase', 'buy', 'subscription', 'upgrade', 'license', 'proposal', 'contract', 'renewal', 'expand', 'budget', 'cost', 'discount', 'deal'];
-  const salesScore = salesKeywords.filter(kw => bodyLower.includes(kw) || subjectLower.includes(kw)).length;
-  
-  // Support keywords
-  const supportKeywords = ['error', 'issue', 'problem', 'access', 'login', 'password', 'help', 'support', 'not working', 'cannot', 'trouble', 'failed', 'reset', 'blocked'];
-  const supportScore = supportKeywords.filter(kw => bodyLower.includes(kw) || subjectLower.includes(kw)).length;
-  
-  // Intent-based scoring
-  if (salesIntents.includes(email.detectedIntent)) {
-    return { category: 'sales', confidence: 85 + Math.min(salesScore * 3, 10) };
-  }
-  if (supportIntents.includes(email.detectedIntent)) {
-    return { category: 'support', confidence: 85 + Math.min(supportScore * 3, 10) };
-  }
-  
-  // Fallback to keyword analysis
-  if (salesScore > supportScore) {
-    return { category: 'sales', confidence: 60 + Math.min(salesScore * 5, 25) };
-  }
-  return { category: 'support', confidence: 60 + Math.min(supportScore * 5, 25) };
-}
-
 export function CopilotPanel({ email, isOpen, onClose }: CopilotPanelProps) {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(true);
   const [activeAgent, setActiveAgent] = useState<AgentType>(null);
-  const [queryCategory, setQueryCategory] = useState<{ category: 'sales' | 'support'; confidence: number } | null>(null);
 
   // Analyze email on mount/change
   const analysis = useMemo(() => analyzeEmail(email), [email]);
   const recommendation = useMemo(() => generateRecommendation(email, analysis), [email, analysis]);
 
-  // Categorize and simulate analysis delay
+  // Simulate analysis delay
   useEffect(() => {
     setIsAnalyzing(true);
     setMessages([]);
     setActiveAgent(null);
-    setQueryCategory(null);
     
     const timer = setTimeout(() => {
-      const category = categorizeQuery(email);
-      setQueryCategory(category);
-      setActiveAgent(category.category);
+      setActiveAgent(analysis.category);
       setIsAnalyzing(false);
     }, 1200);
     
     return () => clearTimeout(timer);
-  }, [email.id]);
+  }, [email.id, analysis.category]);
 
   const handleSend = () => {
     if (!inputValue.trim()) return;
@@ -79,8 +47,6 @@ export function CopilotPanel({ email, isOpen, onClose }: CopilotPanelProps) {
       content: inputValue,
     };
 
-    // Generate contextual response based on email analysis and active agent
-    const agentPrefix = activeAgent === 'sales' ? '[Sales Agent] ' : '[Support Agent] ';
     const responseContent = generateContextualResponse(inputValue, email, analysis, recommendation);
 
     const assistantMessage: AssistantMessage = {
@@ -91,6 +57,10 @@ export function CopilotPanel({ email, isOpen, onClose }: CopilotPanelProps) {
 
     setMessages([...messages, userMessage, assistantMessage]);
     setInputValue('');
+  };
+
+  const handleOpenAgenticFlow = () => {
+    navigate('/agentic-flow', { state: { email, analysis } });
   };
 
   const getUrgencyColor = (urgency: EmailAnalysis['urgency']) => {
@@ -173,43 +143,51 @@ export function CopilotPanel({ email, isOpen, onClose }: CopilotPanelProps) {
         ) : (
           <div className="animate-fade-in">
             {/* Category Detection */}
-            {queryCategory && (
-              <div className="p-3 border-b border-border bg-muted/30">
-                <div className="flex items-center gap-2">
-                  <div className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center",
-                    queryCategory.category === 'sales' ? "bg-green-500/20" : "bg-blue-500/20"
-                  )}>
-                    {queryCategory.category === 'sales' ? (
-                      <ShoppingCart className="w-3 h-3 text-green-600" />
-                    ) : (
-                      <Headphones className="w-3 h-3 text-blue-600" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <span className="text-xs font-medium text-foreground">
-                      Detected: {queryCategory.category === 'sales' ? 'Sales Query' : 'Support Query'}
-                    </span>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <div className="h-1.5 flex-1 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className={cn(
-                            "h-full rounded-full transition-all duration-500",
-                            queryCategory.category === 'sales' ? "bg-green-500" : "bg-blue-500"
-                          )}
-                          style={{ width: `${queryCategory.confidence}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-muted-foreground">{queryCategory.confidence}%</span>
+            <div className="p-3 border-b border-border bg-muted/30">
+              <div className="flex items-center gap-2">
+                <div className={cn(
+                  "w-6 h-6 rounded-full flex items-center justify-center",
+                  analysis.category === 'sales' ? "bg-green-500/20" : "bg-blue-500/20"
+                )}>
+                  {analysis.category === 'sales' ? (
+                    <ShoppingCart className="w-3 h-3 text-green-600" />
+                  ) : (
+                    <Headphones className="w-3 h-3 text-blue-600" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <span className="text-xs font-medium text-foreground">
+                    {analysis.category === 'sales' ? 'Sales Query' : 'Support Query'} → {analysis.intent}
+                  </span>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <div className="h-1.5 flex-1 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className={cn(
+                          "h-full rounded-full transition-all duration-500",
+                          analysis.category === 'sales' ? "bg-green-500" : "bg-blue-500"
+                        )}
+                        style={{ width: `${analysis.confidence}%` }}
+                      />
                     </div>
+                    <span className="text-xs text-muted-foreground">{analysis.confidence}%</span>
                   </div>
                 </div>
               </div>
-            )}
+            </div>
+
+            {/* Agentic Flow Button */}
+            <div className="p-3 border-b border-border">
+              <button
+                onClick={handleOpenAgenticFlow}
+                className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg hover:from-violet-600 hover:to-purple-700 transition-smooth text-sm font-medium"
+              >
+                <Workflow className="w-4 h-4" />
+                View Agentic Flow
+              </button>
+            </div>
 
             {/* Analysis Panel */}
             <div className="p-4 border-b border-border space-y-3">
-              {/* Context Summary */}
               <div className="flex items-start gap-2">
                 <Lightbulb className="w-4 h-4 text-yellow-500 mt-0.5 shrink-0" />
                 <div className="flex-1">
@@ -219,36 +197,11 @@ export function CopilotPanel({ email, isOpen, onClose }: CopilotPanelProps) {
                       {analysis.urgency.charAt(0).toUpperCase() + analysis.urgency.slice(1)} priority
                     </span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-foreground">
-                      {getSentimentIcon(analysis.sentiment)} {analysis.sentiment.charAt(0).toUpperCase() + analysis.sentiment.slice(1)}
+                      {getSentimentIcon(analysis.sentiment)} {analysis.sentiment}
                     </span>
-                    {analysis.decisionMaker && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-600">
-                        Decision-maker
-                      </span>
-                    )}
-                    {analysis.estimatedDealValue !== 'unknown' && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3" />
-                        {analysis.estimatedDealValue.charAt(0).toUpperCase() + analysis.estimatedDealValue.slice(1)} value
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>
-
-              {/* Products Detected */}
-              {analysis.products.length > 0 && (
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-muted-foreground">Products:</span>
-                  <div className="flex flex-wrap gap-1">
-                    {analysis.products.map((product) => (
-                      <span key={product} className="px-2 py-0.5 bg-primary/10 text-primary rounded">
-                        {product}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Recommendation */}
               <div className="bg-primary/5 rounded-lg p-3 border border-primary/10">
@@ -258,34 +211,12 @@ export function CopilotPanel({ email, isOpen, onClose }: CopilotPanelProps) {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-foreground">
-                      {activeAgent === 'sales' ? 'Sales' : 'Support'} recommendation
+                      {activeAgent === 'sales' ? 'Sales' : 'Support'} Agent
                     </p>
                     <p className="text-sm text-primary mt-1">{recommendation.primaryAction}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{recommendation.reasoning}</p>
-                    {recommendation.timeSensitivity && (
-                      <p className="text-xs text-orange-500 mt-1 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {recommendation.timeSensitivity}
-                      </p>
-                    )}
                   </div>
                 </div>
               </div>
-
-              {/* Key Insights */}
-              {analysis.actionableInsights.length > 0 && (
-                <div className="text-xs space-y-1">
-                  <span className="text-muted-foreground font-medium">Insights:</span>
-                  <ul className="space-y-0.5">
-                    {analysis.actionableInsights.slice(0, 3).map((insight, i) => (
-                      <li key={i} className="text-foreground flex items-center gap-1.5">
-                        <span className="w-1 h-1 rounded-full bg-primary" />
-                        {insight}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
 
             {/* Chat Messages */}

@@ -1,7 +1,10 @@
-import { Email, EmailIntent } from '@/types/email';
+import { Email, EmailCategory, EmailIntent, SalesIntent, SupportIntent } from '@/types/email';
 
 export interface EmailAnalysis {
-  customerType: 'academic' | 'healthcare' | 'corporate' | 'consortium' | 'government' | 'internal';
+  category: EmailCategory;
+  intent: EmailIntent;
+  confidence: number;
+  customerType: 'academic' | 'healthcare' | 'corporate' | 'consortium' | 'government' | 'individual';
   urgency: 'critical' | 'high' | 'medium' | 'low';
   products: string[];
   keyRequirements: string[];
@@ -21,29 +24,135 @@ export interface AgentRecommendation {
   timeSensitivity?: string;
 }
 
+// Categorize email as sales or support
+export function categorizeEmail(email: Email): { category: EmailCategory; confidence: number } {
+  const bodyLower = email.body.toLowerCase();
+  const subjectLower = email.subject.toLowerCase();
+  
+  // Sales keywords
+  const salesKeywords = [
+    'pricing', 'quote', 'purchase', 'buy', 'subscription', 'upgrade', 
+    'license', 'proposal', 'contract', 'renewal', 'expand', 'budget', 
+    'cost', 'discount', 'deal', 'demo', 'trial', 'enterprise', 'bundle',
+    'multi-year', 'annual', 'proposal', 'negotiate'
+  ];
+  
+  // Support keywords
+  const supportKeywords = [
+    'error', 'issue', 'problem', 'access denied', 'login', 'password', 
+    'help', 'support', 'not working', 'cannot', 'trouble', 'failed', 
+    'reset', 'blocked', 'refund', 'charge', 'duplicate', 'urgent',
+    'revoked', 'suspended', 'locked out', 'broken'
+  ];
+  
+  const salesScore = salesKeywords.filter(kw => 
+    bodyLower.includes(kw) || subjectLower.includes(kw)
+  ).length;
+  
+  const supportScore = supportKeywords.filter(kw => 
+    bodyLower.includes(kw) || subjectLower.includes(kw)
+  ).length;
+  
+  if (salesScore > supportScore) {
+    return { 
+      category: 'sales', 
+      confidence: Math.min(60 + salesScore * 5, 95) 
+    };
+  }
+  
+  if (supportScore > salesScore) {
+    return { 
+      category: 'support', 
+      confidence: Math.min(60 + supportScore * 5, 95) 
+    };
+  }
+  
+  // Default to sales with lower confidence
+  return { category: 'sales', confidence: 50 };
+}
+
+// Detect specific intent within category
+export function detectIntent(email: Email, category: EmailCategory): { intent: EmailIntent; confidence: number } {
+  const bodyLower = email.body.toLowerCase();
+  const subjectLower = email.subject.toLowerCase();
+  
+  if (category === 'sales') {
+    // Check for high value indicators
+    if (
+      bodyLower.includes('$1') || bodyLower.includes('$2') || 
+      bodyLower.includes('million') || bodyLower.includes('enterprise') ||
+      bodyLower.includes('multi-year') || bodyLower.includes('5-year')
+    ) {
+      return { intent: 'HighValueOpportunity' as SalesIntent, confidence: 90 };
+    }
+    
+    // Check for renewal
+    if (bodyLower.includes('renewal') || bodyLower.includes('renew') || subjectLower.includes('renewal')) {
+      return { intent: 'RenewalRequest' as SalesIntent, confidence: 85 };
+    }
+    
+    // Check for pricing
+    if (
+      bodyLower.includes('pricing') || bodyLower.includes('quote') || 
+      bodyLower.includes('cost') || subjectLower.includes('pricing')
+    ) {
+      return { intent: 'PricingRequest' as SalesIntent, confidence: 85 };
+    }
+    
+    // Default to product enquiry
+    return { intent: 'ProductEnquiry' as SalesIntent, confidence: 70 };
+  }
+  
+  // Support intents
+  if (bodyLower.includes('refund') || bodyLower.includes('charge') || bodyLower.includes('duplicate')) {
+    return { intent: 'ProductRefund' as SupportIntent, confidence: 90 };
+  }
+  
+  if (bodyLower.includes('password') || subjectLower.includes('password')) {
+    return { intent: 'PasswordChange' as SupportIntent, confidence: 90 };
+  }
+  
+  if (bodyLower.includes('reset') && bodyLower.includes('account')) {
+    return { intent: 'AccountReset' as SupportIntent, confidence: 85 };
+  }
+  
+  if (
+    bodyLower.includes('access') && 
+    (bodyLower.includes('denied') || bodyLower.includes('revoked') || bodyLower.includes('cannot'))
+  ) {
+    return { intent: 'AccessIssue' as SupportIntent, confidence: 85 };
+  }
+  
+  // Default to technical support
+  return { intent: 'TechnicalSupport' as SupportIntent, confidence: 70 };
+}
+
 // Analyze email content to extract context
 export function analyzeEmail(email: Email): EmailAnalysis {
   const body = email.body.toLowerCase();
-  const subject = email.subject.toLowerCase();
   const org = email.sender.organization?.toLowerCase() || '';
+  
+  // Get category and intent
+  const categoryResult = categorizeEmail(email);
+  const intentResult = detectIntent(email, categoryResult.category);
 
   // Detect customer type
-  let customerType: EmailAnalysis['customerType'] = 'academic';
+  let customerType: EmailAnalysis['customerType'] = 'individual';
   if (org.includes('clinic') || org.includes('hospital') || org.includes('nhs') || org.includes('medical')) {
     customerType = 'healthcare';
-  } else if (org.includes('consortium') || org.includes('conricyt')) {
+  } else if (org.includes('consortium')) {
     customerType = 'consortium';
-  } else if (org.includes('tcs') || org.includes('consultancy') || org.includes('corp')) {
+  } else if (org.includes('university') || org.includes('edu') || email.sender.email.includes('.edu')) {
+    customerType = 'academic';
+  } else if (org.includes('corp') || org.includes('inc') || org.includes('labs')) {
     customerType = 'corporate';
-  } else if (email.sender.email?.includes('@elsevier.com')) {
-    customerType = 'internal';
   }
 
   // Detect urgency
   let urgency: EmailAnalysis['urgency'] = 'medium';
-  if (body.includes('urgent') || body.includes('critical') || body.includes('immediately') || subject.includes('urgent')) {
+  if (body.includes('urgent') || body.includes('critical') || body.includes('immediately') || body.includes('deadline')) {
     urgency = 'critical';
-  } else if (body.includes('deadline') || body.includes('asap') || body.includes('by end of')) {
+  } else if (body.includes('asap') || body.includes('by end of') || body.includes('tomorrow')) {
     urgency = 'high';
   } else if (body.includes('when convenient') || body.includes('no rush')) {
     urgency = 'low';
@@ -51,12 +160,11 @@ export function analyzeEmail(email: Email): EmailAnalysis {
 
   // Detect products mentioned
   const products: string[] = [];
-  if (body.includes('sciencedirect') || subject.includes('sciencedirect')) products.push('ScienceDirect');
+  if (body.includes('sciencedirect')) products.push('ScienceDirect');
   if (body.includes('scopus')) products.push('Scopus');
   if (body.includes('clinicalkey')) products.push('ClinicalKey');
   if (body.includes('mendeley')) products.push('Mendeley');
   if (body.includes('scival')) products.push('SciVal');
-  if (body.includes('cell') || body.includes('cell press')) products.push('Cell Press');
   if (body.includes('api')) products.push('API Access');
 
   // Extract key requirements
@@ -70,64 +178,58 @@ export function analyzeEmail(email: Email): EmailAnalysis {
   if (body.includes('integration') || body.includes('api') || body.includes('emr')) {
     keyRequirements.push('Technical integration');
   }
-  if (body.includes('multi-year') || body.includes('3-year') || body.includes('long-term')) {
-    keyRequirements.push('Multi-year agreement');
+  if (body.includes('refund')) {
+    keyRequirements.push('Refund processing');
   }
-  if (body.includes('open access') || body.includes('read & publish')) {
-    keyRequirements.push('Open Access/Transformative agreement');
-  }
-  if (body.includes('access') && (body.includes('denied') || body.includes('issue') || body.includes('problem'))) {
+  if (body.includes('access')) {
     keyRequirements.push('Access resolution');
   }
 
   // Estimate deal value
   let estimatedDealValue: EmailAnalysis['estimatedDealValue'] = 'unknown';
-  if (body.includes('€2.1m') || body.includes('$1.2m') || body.includes('150+ institutions') || body.includes('consortium')) {
+  if (body.includes('$1') || body.includes('$2') || body.includes('million') || body.includes('enterprise')) {
     estimatedDealValue = 'high';
-  } else if (body.includes('12') && body.includes('hospital') || body.includes('1,500 residents')) {
-    estimatedDealValue = 'high';
-  } else if (org.includes('university') || org.includes('clinic')) {
+  } else if (body.includes('150') || body.includes('200+') || org.includes('university')) {
     estimatedDealValue = 'medium';
   }
 
   // Detect sentiment
   let sentiment: EmailAnalysis['sentiment'] = 'neutral';
-  if (body.includes('good news') || body.includes('approved') || body.includes('ready to move forward')) {
+  if (body.includes('good news') || body.includes('approved') || body.includes('ready')) {
     sentiment = 'positive';
-  } else if (body.includes('frustrated') || body.includes('disappointed') || body.includes('unacceptable')) {
+  } else if (body.includes('frustrated') || body.includes('disappointed') || body.includes('cannot')) {
     sentiment = 'frustrated';
   } else if (urgency === 'critical' || urgency === 'high') {
     sentiment = 'urgent';
   }
 
   // Check if sender is decision maker
-  const title = email.body.match(/(?:Head|Director|Dean|Manager|Chief|Executive|Coordinator|VP|President)/i);
+  const title = email.body.match(/(?:Head|Director|Dean|Manager|Chief|Executive|VP|President|Administrator)/i);
   const decisionMaker = !!title;
 
   // Generate actionable insights
   const actionableInsights: string[] = [];
   
   if (decisionMaker) {
-    actionableInsights.push(`${email.sender.name} is a decision-maker (${title?.[0] || 'Senior role'})`);
+    actionableInsights.push(`${email.sender.name} is a decision-maker`);
   }
   
   if (estimatedDealValue === 'high') {
-    actionableInsights.push('High-value opportunity - prioritize personal attention');
+    actionableInsights.push('High-value opportunity - prioritize');
   }
   
-  if (body.includes('renewal') && body.includes('expires')) {
-    actionableInsights.push('Active renewal window - time-sensitive decision');
+  if (urgency === 'critical') {
+    actionableInsights.push('Time-sensitive - immediate action required');
   }
   
-  if (body.includes('competitor') || body.includes('alternative') || body.includes('zotero') || body.includes('endnote')) {
-    actionableInsights.push('Competitive evaluation in progress');
-  }
-
   if (products.length > 1) {
     actionableInsights.push(`Cross-sell opportunity: ${products.join(', ')}`);
   }
 
   return {
+    category: categoryResult.category,
+    intent: intentResult.intent,
+    confidence: Math.round((categoryResult.confidence + intentResult.confidence) / 2),
     customerType,
     urgency,
     products,
@@ -141,231 +243,98 @@ export function analyzeEmail(email: Email): EmailAnalysis {
 
 // Generate agent recommendation based on analysis
 export function generateRecommendation(email: Email, analysis: EmailAnalysis): AgentRecommendation {
-  const intent = email.detectedIntent;
+  const { category, intent } = analysis;
   
-  switch (intent) {
-    case 'ProductEnquiry':
-      return generateProductEnquiryRecommendation(email, analysis);
-    case 'PricingOrRenewalRequest':
-      return generatePricingRecommendation(email, analysis);
-    case 'AccessOrEntitlementIssue':
-      return generateAccessIssueRecommendation(email, analysis);
-    case 'AdminOrMaintenanceRequest':
-      return generateAdminRecommendation(email, analysis);
-    case 'DelegateToSalesOps':
-      return generateSalesOpsRecommendation(email, analysis);
-    case 'HighValueSalesConversation':
-      return generateHighValueRecommendation(email, analysis);
+  if (category === 'sales') {
+    return generateSalesRecommendation(email, analysis);
+  }
+  return generateSupportRecommendation(email, analysis);
+}
+
+function generateSalesRecommendation(email: Email, analysis: EmailAnalysis): AgentRecommendation {
+  switch (analysis.intent) {
+    case 'HighValueOpportunity':
+      return {
+        summary: `High-value opportunity from ${email.sender.organization}. Requires personal attention.`,
+        primaryAction: 'Review and craft personalized response',
+        reasoning: 'High-value deals require executive engagement and customized proposals.',
+        alternatives: ['Schedule executive meeting', 'Prepare custom proposal'],
+        talkingPoints: ['Multi-year incentives', 'Bundle discounts', 'Strategic partnership'],
+        timeSensitivity: 'Respond within 4 hours',
+      };
+    case 'RenewalRequest':
+      return {
+        summary: `Renewal request from ${email.sender.organization}.`,
+        primaryAction: 'Forward to Renewals team with context',
+        reasoning: 'Renewal processes should follow standard procedures for efficiency.',
+        alternatives: ['Generate renewal quote', 'Schedule renewal call'],
+        timeSensitivity: 'Respond within 24 hours',
+      };
+    case 'PricingRequest':
+      return {
+        summary: `Pricing request from ${email.sender.organization}.`,
+        primaryAction: 'Generate quote draft',
+        reasoning: 'Provide quick pricing to maintain momentum.',
+        alternatives: ['Send standard pricing sheet', 'Schedule pricing call'],
+        talkingPoints: analysis.keyRequirements,
+        timeSensitivity: 'Respond within 24 hours',
+      };
     default:
       return {
-        summary: 'I need more context to provide a recommendation.',
-        primaryAction: 'Review email manually',
-        reasoning: 'Unable to classify this email clearly.',
-        alternatives: ['Forward to manager', 'Request clarification'],
+        summary: `Product enquiry from ${email.sender.organization}.`,
+        primaryAction: 'Send standard product information',
+        reasoning: 'Standard response should address initial questions.',
+        alternatives: ['Schedule demo', 'Share case studies'],
+        talkingPoints: ['Product features', 'Integration options', 'Pricing tiers'],
       };
   }
 }
 
-function generateProductEnquiryRecommendation(email: Email, analysis: EmailAnalysis): AgentRecommendation {
-  const products = analysis.products.length > 0 ? analysis.products.join(', ') : 'our products';
-  
-  if (analysis.customerType === 'healthcare') {
-    return {
-      summary: `Healthcare product enquiry from ${email.sender.organization}. ${analysis.decisionMaker ? 'Decision-maker involved.' : ''}`,
-      primaryAction: 'Send tailored healthcare solutions package',
-      reasoning: `Healthcare clients typically have specific compliance and integration needs. ${analysis.products.includes('ClinicalKey') ? 'ClinicalKey is a strong fit for clinical workflows.' : ''}`,
-      alternatives: [
-        'Schedule product demo with clinical specialist',
-        'Share case studies from similar healthcare institutions',
-        'Connect with Inside Sales for follow-up'
-      ],
-      talkingPoints: [
-        'EMR integration capabilities (Epic, Cerner)',
-        'Point-of-care decision support features',
-        'CME tracking and compliance reporting',
-        'Mobile access for rounds'
-      ],
-      timeSensitivity: analysis.urgency === 'high' ? 'Respond within 24 hours' : 'Standard response time',
-    };
+function generateSupportRecommendation(email: Email, analysis: EmailAnalysis): AgentRecommendation {
+  switch (analysis.intent) {
+    case 'ProductRefund':
+      return {
+        summary: `Refund request from ${email.sender.name}.`,
+        primaryAction: 'Verify transaction and process refund',
+        reasoning: 'Quick refund processing improves customer satisfaction.',
+        alternatives: ['Escalate to billing', 'Request more information'],
+        timeSensitivity: analysis.urgency === 'critical' ? 'Process immediately' : 'Process within 24 hours',
+      };
+    case 'PasswordChange':
+      return {
+        summary: `Password reset issue from ${email.sender.name}.`,
+        primaryAction: 'Send password reset link via alternate method',
+        reasoning: 'Password issues require immediate resolution for access.',
+        alternatives: ['Escalate to IT', 'Verify identity and reset manually'],
+        timeSensitivity: 'Respond within 2 hours',
+      };
+    case 'AccountReset':
+      return {
+        summary: `Account reset request from ${email.sender.name}.`,
+        primaryAction: 'Initiate account reset procedure',
+        reasoning: 'Account access is critical for customer operations.',
+        alternatives: ['Verify identity first', 'Escalate to security team'],
+        timeSensitivity: 'Respond within 4 hours',
+      };
+    case 'AccessIssue':
+      return {
+        summary: `Access issue reported by ${email.sender.name} at ${email.sender.organization}.`,
+        primaryAction: 'Create support ticket and grant temporary access',
+        reasoning: analysis.urgency === 'critical' 
+          ? 'Critical deadline involved - immediate access restoration needed.'
+          : 'Access issues need investigation to prevent recurrence.',
+        alternatives: ['Escalate to technical team', 'Verify subscription status'],
+        riskFactors: analysis.urgency === 'critical' ? ['Deadline at risk', 'Customer satisfaction impact'] : undefined,
+        timeSensitivity: analysis.urgency === 'critical' ? 'Immediate action required' : 'Respond within 4 hours',
+      };
+    default:
+      return {
+        summary: `Technical support request from ${email.sender.name}.`,
+        primaryAction: 'Create support ticket',
+        reasoning: 'Route to appropriate technical team for resolution.',
+        alternatives: ['Send troubleshooting guide', 'Schedule support call'],
+      };
   }
-
-  if (analysis.customerType === 'corporate') {
-    return {
-      summary: `Corporate R&D enquiry about ${products} from ${email.sender.organization}.`,
-      primaryAction: 'Send enterprise API and analytics package info',
-      reasoning: 'Corporate clients often need API access and analytics for internal dashboards. Focus on integration and ROI.',
-      alternatives: [
-        'Arrange technical consultation call',
-        'Share enterprise customer testimonials',
-        'Provide sandbox environment access'
-      ],
-      talkingPoints: [
-        'API rate limits and pricing tiers',
-        'Data integration options',
-        'Competitive benchmarking capabilities',
-        'Global multi-site licensing'
-      ],
-    };
-  }
-
-  return {
-    summary: `Product enquiry about ${products} from ${email.sender.organization}.`,
-    primaryAction: 'Send standard product information package',
-    reasoning: `${analysis.decisionMaker ? 'This is from a decision-maker, so personalization may help.' : 'Standard response should address their questions.'}`,
-    alternatives: [
-      'Schedule a demo',
-      'Delegate to Inside Sales for follow-up',
-      'Share relevant case studies'
-    ],
-    talkingPoints: analysis.keyRequirements.length > 0 ? analysis.keyRequirements : [
-      'Product features and benefits',
-      'Licensing options',
-      'Implementation support'
-    ],
-  };
-}
-
-function generatePricingRecommendation(email: Email, analysis: EmailAnalysis): AgentRecommendation {
-  if (analysis.estimatedDealValue === 'high') {
-    return {
-      summary: `High-value pricing/renewal request from ${email.sender.organization}. Estimated value: significant.`,
-      primaryAction: 'Generate custom quote draft with strategic pricing',
-      reasoning: 'Large deal requires careful attention. Consider multi-year incentives and bundle opportunities.',
-      alternatives: [
-        'Schedule call with regional account director',
-        'Loop in strategic accounts team',
-        'Prepare competitive positioning analysis'
-      ],
-      talkingPoints: [
-        'Multi-year pricing incentives',
-        'Bundle discounts (e.g., SciVal + Scopus)',
-        'Open Access transformative agreement options',
-        'Added value services'
-      ],
-      riskFactors: [
-        'Budget cycle timing',
-        'Competitive alternatives being evaluated',
-        'Consortium negotiation dynamics'
-      ],
-      timeSensitivity: analysis.urgency === 'critical' ? 'Immediate response required' : 'Respond within 48 hours',
-    };
-  }
-
-  if (analysis.sentiment === 'positive') {
-    return {
-      summary: `Positive renewal signal from ${email.sender.organization}. Budget appears approved.`,
-      primaryAction: 'Resend quote immediately and schedule closing call',
-      reasoning: 'Customer is ready to proceed - minimize friction to close.',
-      alternatives: [
-        'Fast-track procurement paperwork',
-        'Offer expedited onboarding'
-      ],
-      timeSensitivity: 'Respond today - deal is warm',
-    };
-  }
-
-  return {
-    summary: `Pricing request from ${email.sender.organization} regarding ${analysis.products.join(', ') || 'subscription'}.`,
-    primaryAction: 'Forward to Renewals team with context',
-    reasoning: 'Standard renewal process should handle this efficiently.',
-    alternatives: [
-      'Generate preliminary quote',
-      'Request additional requirements'
-    ],
-  };
-}
-
-function generateAccessIssueRecommendation(email: Email, analysis: EmailAnalysis): AgentRecommendation {
-  const isUrgent = analysis.urgency === 'critical' || analysis.urgency === 'high';
-  
-  return {
-    summary: `Access issue reported by ${email.sender.organization}. ${isUrgent ? '⚠️ URGENT - Academic deadlines involved.' : ''}`,
-    primaryAction: isUrgent ? 'Create priority support ticket and escalate' : 'Create support ticket for investigation',
-    reasoning: isUrgent 
-      ? 'Academic deadlines are immovable. Fast resolution protects the relationship and future renewals.'
-      : 'Technical investigation needed - routing to support team.',
-    alternatives: [
-      'Escalate to technical account manager',
-      'Provide temporary workaround if available',
-      'Send acknowledgment while investigating'
-    ],
-    riskFactors: isUrgent ? [
-      'Thesis/publication deadlines at risk',
-      'Potential escalation to procurement',
-      'Renewal goodwill impact'
-    ] : undefined,
-    timeSensitivity: isUrgent ? 'Immediate escalation required' : 'Standard support SLA',
-  };
-}
-
-function generateAdminRecommendation(email: Email, analysis: EmailAnalysis): AgentRecommendation {
-  const isInvoiceRequest = email.body.toLowerCase().includes('invoice');
-  const isAdminAccess = email.body.toLowerCase().includes('admin') && email.body.toLowerCase().includes('access');
-  
-  if (isInvoiceRequest) {
-    return {
-      summary: `Administrative request: Invoice copy needed for ${email.sender.organization}.`,
-      primaryAction: 'Auto-reply confirming invoice will be sent',
-      reasoning: 'Standard admin request - can be handled automatically by Finance/Sales Ops.',
-      alternatives: [
-        'Delegate to Sales Ops',
-        'Pull invoice from billing system'
-      ],
-      timeSensitivity: 'Routine - respond within 1-2 business days',
-    };
-  }
-
-  if (isAdminAccess) {
-    return {
-      summary: `Admin portal access request from ${email.sender.organization}.`,
-      primaryAction: 'Forward to Sales Ops for account provisioning',
-      reasoning: 'Account provisioning follows standard security protocols.',
-      alternatives: [
-        'Verify requester authorization first',
-        'Send access request form'
-      ],
-    };
-  }
-
-  return {
-    summary: `Administrative request from ${email.sender.organization}.`,
-    primaryAction: 'Delegate to Sales Ops',
-    reasoning: 'Administrative tasks should be handled by operations team to free your selling time.',
-    alternatives: [
-      'Auto-reply with FAQ',
-      'Forward to appropriate department'
-    ],
-  };
-}
-
-function generateSalesOpsRecommendation(email: Email, analysis: EmailAnalysis): AgentRecommendation {
-  return {
-    summary: `Internal request from ${email.sender.name} (${email.sender.organization}).`,
-    primaryAction: 'Hand off to Sales Ops with deal context',
-    reasoning: 'Internal operational matters should be resolved through proper channels.',
-    alternatives: [
-      'Respond directly if quick answer available',
-      'Schedule sync with relevant stakeholders'
-    ],
-    timeSensitivity: 'Internal SLA - respond within 24 hours',
-  };
-}
-
-function generateHighValueRecommendation(email: Email, analysis: EmailAnalysis): AgentRecommendation {
-  return {
-    summary: `🎯 Strategic opportunity from ${email.sender.organization}. This requires your personal attention.`,
-    primaryAction: 'Review and craft personalized response',
-    reasoning: 'High-value conversations drive revenue. Your expertise and relationship skills are essential here.',
-    alternatives: [],
-    talkingPoints: [
-      'Reference previous interactions and relationship history',
-      'Address strategic priorities mentioned',
-      'Propose concrete next steps',
-      'Offer executive-level engagement if appropriate'
-    ],
-    riskFactors: analysis.actionableInsights,
-    timeSensitivity: 'Prioritize - respond within 4 hours',
-  };
 }
 
 // Generate contextual chat responses
@@ -377,48 +346,31 @@ export function generateContextualResponse(
 ): string {
   const lowerInput = input.toLowerCase();
 
-  // Handle common queries
   if (lowerInput.includes('why') || lowerInput.includes('explain')) {
-    return `Here's my reasoning:\n\n${recommendation.reasoning}\n\n${analysis.actionableInsights.length > 0 ? `Key insights:\n• ${analysis.actionableInsights.join('\n• ')}` : ''}`;
+    return `${recommendation.reasoning}\n\n${analysis.actionableInsights.length > 0 ? `Key insights:\n• ${analysis.actionableInsights.join('\n• ')}` : ''}`;
   }
 
   if (lowerInput.includes('alternative') || lowerInput.includes('other option')) {
     if (recommendation.alternatives.length > 0) {
-      return `Here are alternative approaches:\n\n${recommendation.alternatives.map((a, i) => `${i + 1}. ${a}`).join('\n')}\n\nWould you like me to proceed with any of these?`;
+      return `Alternative approaches:\n\n${recommendation.alternatives.map((a, i) => `${i + 1}. ${a}`).join('\n')}`;
     }
     return 'The primary action I recommended is the best approach for this situation.';
   }
 
   if (lowerInput.includes('talking point') || lowerInput.includes('what should i say')) {
     if (recommendation.talkingPoints && recommendation.talkingPoints.length > 0) {
-      return `Key talking points for ${email.sender.name}:\n\n${recommendation.talkingPoints.map(tp => `• ${tp}`).join('\n')}`;
+      return `Key talking points:\n\n${recommendation.talkingPoints.map(tp => `• ${tp}`).join('\n')}`;
     }
-    return `Focus on addressing their specific questions about ${analysis.products.join(', ') || 'the product'} and emphasize the value proposition for ${email.sender.organization}.`;
+    return `Focus on addressing their specific questions about ${analysis.products.join(', ') || 'the product'}.`;
   }
 
   if (lowerInput.includes('risk') || lowerInput.includes('concern')) {
     if (recommendation.riskFactors && recommendation.riskFactors.length > 0) {
-      return `Potential risks to consider:\n\n${recommendation.riskFactors.map(rf => `⚠️ ${rf}`).join('\n')}`;
+      return `Potential risks:\n\n${recommendation.riskFactors.map(rf => `⚠️ ${rf}`).join('\n')}`;
     }
-    return 'I don\'t see significant risks with this request, but always consider the customer relationship context.';
+    return 'No significant risks identified for this request.';
   }
 
-  if (lowerInput.includes('customer') || lowerInput.includes('account') || lowerInput.includes('history')) {
-    return `Account summary for ${email.sender.organization}:\n\n• Customer type: ${analysis.customerType.charAt(0).toUpperCase() + analysis.customerType.slice(1)}\n• Products mentioned: ${analysis.products.join(', ') || 'None specified'}\n• Decision-maker: ${analysis.decisionMaker ? 'Yes' : 'Unknown'}\n• Current sentiment: ${analysis.sentiment.charAt(0).toUpperCase() + analysis.sentiment.slice(1)}\n• Deal value estimate: ${analysis.estimatedDealValue.charAt(0).toUpperCase() + analysis.estimatedDealValue.slice(1)}`;
-  }
-
-  if (lowerInput.includes('yes') || lowerInput.includes('proceed') || lowerInput.includes('do it')) {
-    return `Great! I'm executing: "${recommendation.primaryAction}"\n\n✓ Action completed. ${recommendation.timeSensitivity ? `Note: ${recommendation.timeSensitivity}` : ''}`;
-  }
-
-  if (lowerInput.includes('draft') || lowerInput.includes('write') || lowerInput.includes('compose')) {
-    return `I'll draft a response for ${email.sender.name}. Here's a starting point:\n\n---\nDear ${email.sender.name.split(' ')[0]},\n\nThank you for reaching out regarding ${analysis.products[0] || 'your inquiry'}.\n\n${recommendation.talkingPoints ? recommendation.talkingPoints[0] + '\n\n' : ''}I'd be happy to ${recommendation.primaryAction.toLowerCase()}. Let me know if you have any questions.\n\nBest regards`;
-  }
-
-  if (lowerInput.includes('help') || lowerInput.includes('what can you')) {
-    return `I can help you with:\n\n• Analyze this email's context and requirements\n• Explain my recommendation reasoning\n• Suggest talking points for your response\n• Identify risks or concerns\n• Draft a response\n• Pull account information\n• Execute routine actions\n\nJust ask!`;
-  }
-
-  // Default contextual response
-  return `Based on my analysis of this ${analysis.customerType} email from ${email.sender.organization}, I recommend: ${recommendation.primaryAction}.\n\n${analysis.urgency === 'critical' || analysis.urgency === 'high' ? '⏰ This appears time-sensitive.' : ''} Would you like me to proceed or would you prefer an alternative approach?`;
+  // Default response
+  return `Based on my analysis, this is a ${analysis.category} query with ${analysis.intent} intent. ${recommendation.reasoning}`;
 }
