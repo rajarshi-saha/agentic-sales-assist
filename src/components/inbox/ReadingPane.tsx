@@ -10,9 +10,11 @@ interface ReadingPaneProps {
   onAnalyze?: () => void;
   showCopilot: boolean;
   onCloseCopilot: () => void;
+  triggerAnalysis?: boolean;
+  onAnalysisComplete?: () => void;
 }
 
-export function ReadingPane({ email, onAction, onAnalyze, showCopilot, onCloseCopilot }: ReadingPaneProps) {
+export function ReadingPane({ email, onAction, onAnalyze, showCopilot, onCloseCopilot, triggerAnalysis, onAnalysisComplete }: ReadingPaneProps) {
   if (!email) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-muted/30">
@@ -102,7 +104,13 @@ export function ReadingPane({ email, onAction, onAnalyze, showCopilot, onCloseCo
 
       {/* Copilot Side Panel */}
       {showCopilot && (
-        <CopilotPanel email={email} isOpen={showCopilot} onClose={onCloseCopilot} />
+        <CopilotPanel 
+          email={email} 
+          isOpen={showCopilot} 
+          onClose={onCloseCopilot}
+          triggerAnalysis={triggerAnalysis}
+          onAnalysisComplete={onAnalysisComplete}
+        />
       )}
     </div>
   );
