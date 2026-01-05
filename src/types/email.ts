@@ -54,6 +54,8 @@ export interface AssistantMessage {
   content: string;
 }
 
+export type UserRole = 'sales_rep' | 'sales_manager';
+
 export interface AgentStep {
   id: string;
   agentName: string;
@@ -62,6 +64,34 @@ export interface AgentStep {
   input?: string;
   output?: string;
   duration?: number;
+}
+
+export interface EmailAnalysis {
+  category: EmailCategory;
+  intent: EmailIntent;
+  confidence: number;
+  customerType: 'academic' | 'healthcare' | 'corporate' | 'consortium' | 'government' | 'individual';
+  urgency: 'critical' | 'high' | 'medium' | 'low';
+  products: string[];
+  keyRequirements: string[];
+  estimatedDealValue: 'high' | 'medium' | 'low' | 'unknown';
+  sentiment: 'positive' | 'neutral' | 'frustrated' | 'urgent';
+  decisionMaker: boolean;
+  actionableInsights: string[];
+}
+
+export interface APIAnalysisResponse {
+  category: string;
+  intent: string;
+  confidence: number;
+  summary: string;
+  recommended_action: string;
+  agent_type: string;
+  steps?: Array<{
+    step: string;
+    status: string;
+    output?: string;
+  }>;
 }
 
 export interface AgenticWorkflow {

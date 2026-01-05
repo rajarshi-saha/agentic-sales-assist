@@ -1,18 +1,4 @@
-import { Email, EmailCategory, EmailIntent, SalesIntent, SupportIntent } from '@/types/email';
-
-export interface EmailAnalysis {
-  category: EmailCategory;
-  intent: EmailIntent;
-  confidence: number;
-  customerType: 'academic' | 'healthcare' | 'corporate' | 'consortium' | 'government' | 'individual';
-  urgency: 'critical' | 'high' | 'medium' | 'low';
-  products: string[];
-  keyRequirements: string[];
-  estimatedDealValue: 'high' | 'medium' | 'low' | 'unknown';
-  sentiment: 'positive' | 'neutral' | 'frustrated' | 'urgent';
-  decisionMaker: boolean;
-  actionableInsights: string[];
-}
+import { Email, EmailCategory, EmailIntent, SalesIntent, SupportIntent, EmailAnalysis } from '@/types/email';
 
 export interface AgentRecommendation {
   summary: string;

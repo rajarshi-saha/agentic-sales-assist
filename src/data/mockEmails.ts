@@ -1,12 +1,49 @@
 import { Email } from '@/types/email';
 
+export type UserRole = 'sales_rep' | 'sales_manager';
+
+export interface EmailWithRole extends Email {
+  assignedTo?: UserRole;
+}
+
 export const mockEmails: Email[] = [
   // Sales Query Emails
   {
     id: '1',
     sender: {
-      name: 'Dr. Maria Santos',
-      email: 'm.santos@stanford-medical.edu',
+      name: 'Amanda Clark',
+      email: 'amanda.clark@example.com',
+      organization: 'TCS Research',
+    },
+    subject: 'Request for Scopus API for Research Analytics',
+    body: `Dear Elsevier Team,
+
+I am writing on behalf of TCS Research as we are currently developing an internal research analytics dashboard. We are interested in integrating Scopus data through your API to enhance our capabilities.
+
+Specifically, we aim to:
+- Pull citation metrics for our published papers
+- Track research output across more than 50 global R&D centers
+- Benchmark our performance against competitors
+
+Could you please provide details on the available API tiers, including rate limits and pricing models? Additionally, is there a sandbox environment that we can use for testing purposes?
+
+Looking forward to your response.
+
+Best regards,
+Dr. Priya Sharma
+Head of Research Analytics
+Tata Consultancy Services`,
+    preview: 'Writing on behalf of TCS Research for Scopus API integration...',
+    receivedTime: new Date(Date.now() - 1000 * 60 * 30),
+    isRead: false,
+    isHandled: false,
+    folder: 'inbox',
+  },
+  {
+    id: '2',
+    sender: {
+      name: 'Brian Ramirez',
+      email: 'brian.ramirez@example.com',
       organization: 'Stanford Medical Center',
     },
     subject: 'ClinicalKey Pricing for Residency Program',
@@ -26,35 +63,7 @@ Looking forward to your proposal.
 Best regards,
 Dr. Maria Santos
 Director of Medical Education`,
-    preview: "I'm the Director of Medical Education looking to expand ClinicalKey...",
-    receivedTime: new Date(Date.now() - 1000 * 60 * 30),
-    isRead: false,
-    isHandled: false,
-    folder: 'inbox',
-  },
-  {
-    id: '2',
-    sender: {
-      name: 'James Chen',
-      email: 'j.chen@tcs-research.com',
-      organization: 'TCS Research Labs',
-    },
-    subject: 'ScienceDirect API Access - Enterprise Quote Request',
-    body: `Hello,
-
-TCS Research Labs is interested in your ScienceDirect API for our internal research platform. We need:
-
-- Full text access to approximately 50,000 articles per year
-- Real-time API integration
-- Analytics and usage dashboards
-- Support for multiple concurrent users (200+)
-
-This is for our R&D division with a budget of around $1.2M annually. Could you arrange a technical demo and provide enterprise pricing?
-
-Best,
-James Chen
-VP of Research Operations`,
-    preview: 'TCS Research Labs is interested in your ScienceDirect API...',
+    preview: "Director of Medical Education looking to expand ClinicalKey...",
     receivedTime: new Date(Date.now() - 1000 * 60 * 60 * 2),
     isRead: false,
     isHandled: false,
@@ -63,58 +72,60 @@ VP of Research Operations`,
   {
     id: '3',
     sender: {
-      name: 'Sarah Williams',
-      email: 's.williams@oxford.ac.uk',
-      organization: 'Oxford University Press',
+      name: 'Catherine Lewis',
+      email: 'catherine.lewis@example.com',
+      organization: 'King Abdulaziz University',
     },
-    subject: 'Product Information - Scopus vs Web of Science',
-    body: `Hi there,
+    subject: 'URGENT: Students unable to access Scopus',
+    body: `Dear Support,
 
-We're evaluating citation databases for our university library system. Could you provide detailed information on:
+Since yesterday morning, our graduate students have been unable to access Scopus. They're getting an "Access Denied" error even when on campus.
 
-- How Scopus compares to Web of Science
-- Coverage of humanities and social sciences
-- Pricing for academic institutions
-- Trial access options
+This is critical as we have thesis submission deadlines next week and students need to complete their literature reviews.
 
-We have a committee meeting in 2 weeks and need this information for our evaluation report.
+Our IT team confirmed the IP ranges haven't changed. Our subscription should be active through June 2025.
 
-Thank you,
-Sarah Williams
-Library Acquisitions`,
-    preview: "We're evaluating citation databases for our university library...",
-    receivedTime: new Date(Date.now() - 1000 * 60 * 60 * 5),
-    isRead: true,
+Please investigate immediately.
+
+Dr. Ahmed Hassan
+Dean of Graduate Studies
+King Abdulaziz University, Saudi Arabia`,
+    preview: 'Graduate students unable to access Scopus - Access Denied error...',
+    receivedTime: new Date(Date.now() - 1000 * 60 * 45),
+    isRead: false,
     isHandled: false,
     folder: 'inbox',
   },
   {
     id: '4',
     sender: {
-      name: 'Robert Taylor',
-      email: 'r.taylor@bigpharma.com',
-      organization: 'BigPharma Corp',
+      name: 'David Robinson',
+      email: 'david.robinson@example.com',
+      organization: 'Research Institute',
     },
-    subject: 'Enterprise License Renewal - Multi-Year Deal Discussion',
-    body: `Hi Sales Team,
+    subject: 'Refund Request – ScienceDirect PPV Order PO-20251231-001',
+    body: `Dear Elsevier Customer Support Team,
 
-Good news - our procurement committee has approved budget for a 5-year renewal of our enterprise ScienceDirect license.
+I am writing to request a refund for a recently purchased ScienceDirect Pay-Per-View (PPV) article. Below are the details of the transaction:
 
-Current contract value: $2.1M annually
-Preferred term: 5-year agreement with 3% annual cap
+- Purchase Order Number: PO-20251231-001
+- Article DOI: 10.1016/j.scitotenv.2025.123456
+- Reason for Refund: The article was mistakenly purchased and I have discovered that it is already available through my institution's subscription.
 
-We'd also like to discuss adding Scopus and SciVal to our bundle. Can we schedule a call this week to discuss terms?
+I kindly request that you process a refund for this purchase. Please let me know if any additional information is required or if there are further steps I need to take to facilitate this request.
 
-Best regards,
-Robert Taylor
-Chief Procurement Officer`,
-    preview: 'Good news - our procurement committee has approved budget for a 5-year renewal...',
-    receivedTime: new Date(Date.now() - 1000 * 60 * 60 * 8),
-    isRead: true,
+Thank you for your assistance. I appreciate your prompt attention to this matter and look forward to your confirmation of the refund.
+
+Sincerely,
+[Your Name]
+Researcher, [Your Institution]
+[Your Contact Information]`,
+    preview: 'Request for refund of ScienceDirect PPV article...',
+    receivedTime: new Date(Date.now() - 1000 * 60 * 60 * 3),
+    isRead: false,
     isHandled: false,
     folder: 'inbox',
   },
-  // Support Query Emails
   {
     id: '5',
     sender: {
@@ -136,9 +147,9 @@ My account email: a.hassan@cairo-university.edu
 
 Regards,
 Ahmed Hassan`,
-    preview: "I CANNOT access journals I purchased yesterday. My thesis defense...",
-    receivedTime: new Date(Date.now() - 1000 * 60 * 45),
-    isRead: false,
+    preview: "CANNOT access journals I purchased yesterday. Thesis deadline...",
+    receivedTime: new Date(Date.now() - 1000 * 60 * 60 * 4),
+    isRead: true,
     isHandled: false,
     folder: 'inbox',
   },
@@ -164,8 +175,8 @@ Please escalate this issue.
 Thanks,
 Linda Martinez
 IT Administrator`,
-    preview: "I'm trying to reset my admin password but reset emails are not arriving...",
-    receivedTime: new Date(Date.now() - 1000 * 60 * 60 * 3),
+    preview: "Trying to reset admin password but reset emails are not arriving...",
+    receivedTime: new Date(Date.now() - 1000 * 60 * 60 * 5),
     isRead: false,
     isHandled: false,
     folder: 'inbox',
@@ -173,28 +184,25 @@ IT Administrator`,
   {
     id: '7',
     sender: {
-      name: 'Michael Brown',
-      email: 'm.brown@techstart.io',
-      organization: 'TechStart Inc',
+      name: 'Robert Taylor',
+      email: 'r.taylor@bigpharma.com',
+      organization: 'BigPharma Corp',
     },
-    subject: 'Refund Request - Duplicate Subscription Charge',
-    body: `Hi,
+    subject: 'Enterprise License Renewal - Multi-Year Deal Discussion',
+    body: `Hi Sales Team,
 
-I was charged twice for my Mendeley Teams subscription this month. 
+Good news - our procurement committee has approved budget for a 5-year renewal of our enterprise ScienceDirect license.
 
-Transaction 1: $49.99 on Jan 15
-Transaction 2: $49.99 on Jan 16
+Current contract value: $2.1M annually
+Preferred term: 5-year agreement with 3% annual cap
 
-Both have the same reference number: MEN-2024-5567
+We'd also like to discuss adding Scopus and SciVal to our bundle. Can we schedule a call this week to discuss terms?
 
-Please process a refund for the duplicate charge to my credit card ending in 4521.
-
-Account email: m.brown@techstart.io
-
-Thanks,
-Michael Brown`,
-    preview: 'I was charged twice for my Mendeley Teams subscription this month...',
-    receivedTime: new Date(Date.now() - 1000 * 60 * 60 * 6),
+Best regards,
+Robert Taylor
+Chief Procurement Officer`,
+    preview: 'Procurement approved budget for 5-year renewal...',
+    receivedTime: new Date(Date.now() - 1000 * 60 * 60 * 8),
     isRead: true,
     isHandled: false,
     folder: 'inbox',
@@ -217,8 +225,8 @@ This is affecting multiple researchers. Please investigate urgently.
 
 Prof. Elena Kowalski
 Department of Chemistry`,
-    preview: 'My institutional access to ScienceDirect has been revoked...',
-    receivedTime: new Date(Date.now() - 1000 * 60 * 60 * 4),
+    preview: 'Institutional access revoked even though subscription is active...',
+    receivedTime: new Date(Date.now() - 1000 * 60 * 60 * 6),
     isRead: false,
     isHandled: false,
     folder: 'inbox',
