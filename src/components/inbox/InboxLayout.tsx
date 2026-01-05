@@ -18,6 +18,7 @@ export function InboxLayout() {
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [showCopilot, setShowCopilot] = useState(false);
+  const [triggerAnalysis, setTriggerAnalysis] = useState(false);
 
   const filteredEmails = emails.filter(e => e.folder === activeFolder);
   const selectedEmail = emails.find(e => e.id === selectedEmailId) || null;
@@ -25,6 +26,8 @@ export function InboxLayout() {
 
   const handleSelectEmail = useCallback((email: Email) => {
     setSelectedEmailId(email.id);
+    setShowCopilot(false);
+    setTriggerAnalysis(false);
     
     // Mark as read
     if (!email.isRead) {
@@ -60,10 +63,15 @@ export function InboxLayout() {
 
   const handleAnalyze = useCallback(() => {
     setShowCopilot(true);
+    setTriggerAnalysis(true);
   }, []);
 
   const handleCloseCopilot = useCallback(() => {
     setShowCopilot(false);
+  }, []);
+
+  const handleAnalysisComplete = useCallback(() => {
+    setTriggerAnalysis(false);
   }, []);
 
   return (
@@ -89,6 +97,8 @@ export function InboxLayout() {
         onAnalyze={handleAnalyze}
         showCopilot={showCopilot}
         onCloseCopilot={handleCloseCopilot}
+        triggerAnalysis={triggerAnalysis}
+        onAnalysisComplete={handleAnalysisComplete}
       />
 
       {/* Action Feedback Toast */}
