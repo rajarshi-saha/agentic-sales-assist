@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Email, AssistantMessage } from '@/types/email';
+import { Email, AssistantMessage, EmailAnalysis } from '@/types/email';
 import { cn } from '@/lib/utils';
 import { Bot, Send, ChevronDown, ChevronUp, Sparkles, Brain, Lightbulb, AlertCircle, TrendingUp } from 'lucide-react';
-import { analyzeEmail, generateRecommendation, generateContextualResponse, EmailAnalysis, AgentRecommendation } from '@/lib/emailAnalyzer';
+import { analyzeEmail, generateRecommendation, generateContextualResponse, AgentRecommendation } from '@/lib/emailAnalyzer';
 
 interface SalesAssistantProps {
   email: Email;
